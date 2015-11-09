@@ -183,7 +183,11 @@ while [ $c -lt $maxnum ] ; do
   case "x$method" in
   xs4)
     set_alarm $t
-    pm-hibernate
+    if which pm-hibernate >/dev/null; then
+        pm-hibernate
+    else 
+        systemctl hibernate
+    fi
     ;;
   xs4k)
     set_alarm $t
@@ -192,7 +196,11 @@ while [ $c -lt $maxnum ] ; do
   xs3)
     #NUM_SECONDS_TO_SLEEP=$resume pm-suspend
     set_alarm $t
-    pm-suspend
+    if which pm-suspend >/dev/null; then
+        pm-suspend
+    else
+        systemctl suspend
+    fi
     ;;
   xs3k)
     set_alarm $t
