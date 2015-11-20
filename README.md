@@ -1,2 +1,2 @@
 # stsx
-Stress Test fuer S3/S4
+Stress Testing Tool for S3/S4
