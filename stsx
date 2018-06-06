@@ -66,6 +66,7 @@ fi
 
 delay=10
 resume=""
+alternate=0
 simulation="none"
 
 case "x$method" in
