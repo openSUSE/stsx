@@ -120,11 +120,6 @@ case "x$method" in
   *)              error "Unknown method $method"
 esac
 
-
-if ! [ "$watchdog_port" -eq "$watchdog_port" ] 2>/dev/null;then
-  error "Invalid port number"
-fi
-
 if ! [ "$watchdog_port" -ge 1 -a "$watchdog_port" -le 65535 ]; then
   error "Port number of the watchdog is out of range."
 fi
