@@ -34,7 +34,7 @@ log=$dir/stsx.log
 
 usage(){
   cat <<EOF
-Usage: ${script_name} [-mlp] <s4|s4k|s3|s3k|s0|s0k|s4simdev|s4simcore|s3simdev|s3simplatform|s3simcore|s4simcpu>
+Usage: ${script_name} [-mlp] <s4|s4k|s3|s3k|s0|s0k|s43|s43k|s30|s30k|s40|s40k|s4simdev|s4simcore|s3simdev|s3simplatform|s3simcore|s4simcpu>
 
 -m    Specifies the maximum of retries.
 -l    Specifies the watchdog server.
@@ -98,7 +98,7 @@ method="$1"
 
 delay=10
 resume=""
-alternate=0
+alternate="none"
 simulation="none"
 
 case "x$method" in
@@ -108,8 +108,12 @@ case "x$method" in
   xs3k)           resume=20 ;;
   xs0)            resume=20; ;;
   xs0k)           resume=20; ;;
-  xs43)           alternate=1 method="s4" resume=70 ;;
-  xs43k)          alternate=1 method="s4" resume=70 ;;
+  xs43)           alternate="s3" method="s4" resume=70 ;;
+  xs43k)          alternate="s3k" method="s4k" resume=70 ;;
+  xs30)           alternate="s0" method="s3" resume=20 ;;
+  xs30k)          alternate="s0k" method="s3k" resume=20 ;;
+  xs40)           alternate="s0" method="s4" resume=70 ;;
+  xs40k)          alternate="s0k" method="s4k" resume=70 ;;
   xs4simdev)      simulation="devices" delay=5 ;;
   xs4simcore)     simulation="core" delay=5 ;;
   xs3simdev)      simulation="devices" delay=5 ;;
@@ -312,14 +316,14 @@ while [ $c -lt $maxnum ] ; do
   echo "$method sim $simulation $c: $d: resuming"
 
 
-  if [ $alternate -eq 1 ] ; then
-  if [ "$method" == "s4" ] ; then
-      resume=20
-      method="s3"
-  else
+  if [ "x$alternate" != "xnone" ] ; then
+    temp=$alternate
+    alternate=$method
+    method=$temp
+    resume=20
+    if [ "$method" =~ "^s4k?$" ] ; then
       resume=70
-      method="s4"
-  fi
+    fi
   fi
 
 

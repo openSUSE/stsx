@@ -23,7 +23,7 @@ Label: "disk"
 ```
 
 ```
-Usage: stsx [-mlp] <s4|s4k|s3|s3k|s0|s0k|s4simdev|s4simcore|s3simdev|s3simplatform|s3simcore|s4simcpu>
+Usage: stsx [-mlp] <s4|s4k|s3|s3k|s0|s0k|s43|s43k|s30|s30k|s40|s40k|s4simdev|s4simcore|s3simdev|s3simplatform|s3simcore|s4simcpu>
 
 -m    Specifies the maximum of retries.
 -l    Specifies the watchdog server.
