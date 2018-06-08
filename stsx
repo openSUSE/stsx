@@ -321,7 +321,7 @@ while [ $c -lt $maxnum ] ; do
     alternate=$method
     method=$temp
     resume=20
-    if [ "$method" =~ "^s4k?$" ] ; then
+    if [ "$method" =~ "^s4" ] ; then
       resume=70
     fi
   fi
