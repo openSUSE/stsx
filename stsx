@@ -320,10 +320,10 @@ while [ $c -lt $maxnum ] ; do
     temp=$alternate
     alternate=$method
     method=$temp
-    resume=20
-    if [ "$method" =~ "^s4" ] ; then
-      resume=70
-    fi
+    case $method in
+      s4*) resume=70 ;;
+      *)   resume=20
+    esac
   fi
 
 
