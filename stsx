@@ -137,8 +137,7 @@ if [ "x$watchdog" != x ]; then
   fi
 fi
 
-user_check=$(cat /etc/passwd | cut -d: -f1 | grep $user)
-if [ "x${user}" != "x" -a "x${user_check}" = "x" ];then
+if [ "x${user}" != "x" ] && [ -z "$(getent passwd $user | cut -d: -f1)" ];then
   error "No such user: ${user}"
 fi
 
