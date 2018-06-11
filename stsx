@@ -6,9 +6,10 @@
 # Copyright (c) 2013 Rick Salevsky <rsalevsky@suse.de>
 # Copyright (c) 2014 Joshua Schmidt <jschmid@suse.de>
 # Copyright (c) 2015 Benjamin Hertwig <bhertwig@suse.de>
-# Copyright (c) 2009-2015 Stefan Dirsch <sndirsch@suse.de>
-# Copyright (c) 2009-2015 Oliver Neukum <oneukum@suse.de>
-# Copyright (c) 2009-2015 Takashi Iwai <tiwai@suse.de>
+# Copyright (c) 20018 Jürgen Löhel <jloehel@suse.com>
+# Copyright (c) 2009-2018 Stefan Dirsch <sndirsch@suse.de>
+# Copyright (c) 2009-2018 Oliver Neukum <oneukum@suse.de>
+# Copyright (c) 2009-2018 Takashi Iwai <tiwai@suse.de>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -34,26 +35,33 @@ log=$dir/stsx.log
 
 usage(){
   cat <<EOF
-Usage: ${script_name} [-mlp] <s4|s4k|s3|s3k|s0|s0k|s43|s43k|s30|s30k|s40|s40k|s4simdev|s4simcore|s3simdev|s3simplatform|s3simcore|s4simcpu>
+Usage: ${script_name} [-mlpuh] <s4|s4k|s3|s3k|s0|s0k|s43|s43k|s30|s30k|s40|s40k|s4simdev|s4simcore|s3simdev|s3simplatform|s3simcore|s4simcpu>
 
 -m    Specifies the maximum of retries.
+      Default: 9999999999
 -l    Specifies the watchdog server.
       Example: localhost
 -p    Specifies the port of the watchdog server
       Default: 1234
+-u    The username of the user who owns the GNOME/KDE/XFCE-Session.
+      This username is required to disable the auto suspend/blank properly.
+      If you don't specify this username, please disable auto suspend/black
+      manually.
+-h    Displays this message
 
-Possible deductions:
-simdev fails                 -> no BIOS issue
-simcore passes AND s4k fails -> BIOS issue
-s4simcpu fails               -> no BIOS issue + CPU hotplug bug
+      Possible deductions:
+      simdev fails                 -> no BIOS issue
+      simcore passes AND s4k fails -> BIOS issue
+      s4simcpu fails               -> no BIOS issue + CPU hotplug bug
 
-Only use coresim on machines that switch off power to busses in ACPI.
+      Only use coresim on machines that switch off power to busses in
+      ACPI.
 
 EOF
 }
 
 error(){
-  echo $1
+  echo "[Error] $1"
   echo ""
   usage
   exit 1
@@ -72,25 +80,19 @@ method=""
 watchdog=""
 watchdog_port=1234
 maxnum=9999999999
+user=""
 
-while getopts "l:m:p:h" opt; do
+while getopts "l:m:p:u:h" opt; do
   case ${opt} in
-    m)
-      maxnum=$OPTARG
-      ;;
-    l)
-      watchdog=$OPTARG
-      ;;
-    p)
-      watchdog_port=$OPTARG
-      ;;
+    m) maxnum=$OPTARG ;;
+    l) watchdog=$OPTARG ;;
+    p) watchdog_port=$OPTARG ;;
+    u) user=$OPTARG ;;
     h)
       usage
       exit 0
       ;;
-    \?)
-      error "Unknow option!"
-      ;;
+    \?) error "Unknow option!" ;;
   esac
 done
 shift $(($OPTIND-1))
@@ -128,11 +130,15 @@ if ! [ "$watchdog_port" -ge 1 -a "$watchdog_port" -le 65535 ]; then
   error "Port number of the watchdog is out of range."
 fi
 
-if [ "x$watchdog" != x ] ; then
+if [ "x$watchdog" != x ]; then
   nc -w 5 -z $watchdog $watchdog_port > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     error "The watchdog is not reachable."
   fi
+fi
+
+if [ "x${user}" != "x" ] && [ -z "$(getent passwd $user | cut -d: -f1)" ];then
+  error "No such user: ${user}"
 fi
 
 #
@@ -151,11 +157,24 @@ if [ "x$resume" != x ] ; then
 
 fi
 
+disable_auto_suspend_gnome(){
+  echo "!!ATTENTION!! Disabling auto sleep and screen blank"
+  su $user -c "gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 0"
+  su $user -c "gsettings set org.gnome.desktop.screensaver idle-activation-enabled false"
+}
+disable_auto_suspend_xfce(){
+  echo "!!ATTENTION!! Disabling auto sleep and screen blank"
+  su $user -c "xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/inactivity-on-ac -n -t uint -s 0"
+  su $user -c "xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/inactivity-on-battery -n -t uint -s 0"
+}
+
 # Disable auto suspend / blank
-if [ x`gconftool-2 -g /apps/gnome-power-manager/timeout/sleep_computer_ac` != x0 ] ; then
-  echo "!!ATTENTION!! Disabling auto sleep and screen saver"
-  gconftool-2 -s /apps/gnome-power-manager/timeout/sleep_computer_ac --type int 0
-  gconftool-2 -s /apps/gnome-screensaver/idle_activation_enabled --type bool false
+if [ x$user != x ];then
+  case "x$XDG_CURRENT_DESKTOP" in
+    xGNOME) disable_auto_suspend_gnome ;;
+    xXFCE)  disable_auto_suspend_xfce ;;
+    *)      echo "[WARNING] Can not disable auto suspend and screen blank for $XDG_CURRENT_DESKTOP"
+  esac
 fi
 
 echo ""
