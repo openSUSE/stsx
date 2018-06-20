@@ -81,6 +81,7 @@ watchdog=""
 watchdog_port=1234
 maxnum=9999999999
 user=""
+dbus_cookie=""
 
 while getopts "l:m:p:u:h" opt; do
   case ${opt} in
@@ -157,24 +158,33 @@ if [ "x$resume" != x ] ; then
 
 fi
 
-disable_auto_suspend_gnome(){
-  echo "!!ATTENTION!! Disabling auto sleep and screen blank"
-  su $user -c "gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 0"
-  su $user -c "gsettings set org.gnome.desktop.screensaver idle-activation-enabled false"
+uninhibit_power_mgmt() {
+  echo "!!ATTENTION!! Enable PowerMangement."
+  su $user -c \
+    "dbus-send \
+    --print-reply=literal \
+    --dest=org.freedesktop.PowerManagement \
+    /org/freedesktop/PowerManagement/Inhibit \
+    org.freedesktop.PowerManagement.Inhibit.UnInhibit uint32:${dbus_cookie}"
+  echo "PowerManagement uninhibited (cookie:${dbus_cookie})"
 }
-disable_auto_suspend_xfce(){
-  echo "!!ATTENTION!! Disabling auto sleep and screen blank"
-  su $user -c "xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/inactivity-on-ac -n -t uint -s 0"
-  su $user -c "xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/inactivity-on-battery -n -t uint -s 0"
+
+inhibit_power_mgmt() {
+  echo "!!ATTENTION!! Disabling PowerMangement."
+  dbus_cookie=$(su $user -c \
+    "dbus-send \
+    --print-reply=literal \
+    --dest=org.freedesktop.PowerManagement \
+    /org/freedesktop/PowerManagement/Inhibit \
+    org.freedesktop.PowerManagement.Inhibit.Inhibit \
+    string:'${script_name}' \
+    string:'Disable pwr mgmt for awhile.'" | awk '{print $2}')
+  trap uninhibit_power_mgmt EXIT
 }
 
 # Disable auto suspend / blank
 if [ x$user != x ];then
-  case "x$XDG_CURRENT_DESKTOP" in
-    xGNOME) disable_auto_suspend_gnome ;;
-    xXFCE)  disable_auto_suspend_xfce ;;
-    *)      echo "[WARNING] Can not disable auto suspend and screen blank for $XDG_CURRENT_DESKTOP"
-  esac
+  inhibit_power_mgmt
 fi
 
 echo ""
@@ -356,4 +366,3 @@ echo "Maximum reached"
 echo "Maximum reached" >>$log
 
 exit 0
-
